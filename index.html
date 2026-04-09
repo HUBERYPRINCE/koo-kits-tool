@@ -1,1 +1,315 @@
-<option value="">(无可用预设)</option>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF符号自动排版PROv1.0 (本地部署版)</title>
+    <script src="./libs/pdf.min.js"></script>
+    <script src="./libs/pdf-lib.min.js"></script>
+    <style>
+        /* iOS 颜色常量定义 */
+        :root {
+            --ios-bg: #F2F2F7; --ios-card: #FFFFFF; --ios-blue: #007AFF;
+            --ios-green: #34C759; --ios-orange: #FF9500; --ios-gray: #8E8E93;
+        }
+        body { font-family: -apple-system, "Helvetica", sans-serif; background-color: var(--ios-bg); margin: 0; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 580px; }
+        h1 { color: var(--ios-blue); text-align: center; font-size: 28px; margin-bottom: 25px; }
+        .card { background-color: var(--ios-card); border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card-title { font-size: 14px; font-weight: bold; margin-bottom: 15px; }
+        .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .row label { width: 90px; color: #555; font-size: 14px; }
+        .path-label { flex-grow: 1; color: #888; font-size: 14px; margin: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        input[type="number"], input[type="text"] { width: 60px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 5px; }
+        button { border: none; border-radius: 8px; padding: 8px 15px; color: white; font-size: 14px; cursor: pointer; }
+        button:hover { opacity: 0.8; }
+        button:disabled { background-color: #ccc !important; cursor: not-allowed; }
+        .btn-gray { background-color: var(--ios-gray); } .btn-green { background-color: var(--ios-green); }
+        .btn-orange { background-color: var(--ios-orange); } .btn-purple { background-color: #5856D6; }
+        .btn-blue { background-color: var(--ios-blue); } .btn-red { background-color: #FF3B30; }
+        .btn-main { width: 100%; background-color: #000; border-radius: 12px; height: 55px; font-size: 18px; font-weight: bold; margin-top: 10px; }
+        input[type="file"] { display: none; }
+        .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 10px; height: 8px; margin: 15px 0; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background-color: var(--ios-blue); transition: width 0.3s; }
+        .status-lbl { text-align: center; color: #6569e6; font-size: 12px; margin-top: 10px; font-weight: bold; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--ios-bg); width: 400px; border-radius: 15px; padding: 20px; }
+        .modal-content select, .modal-content input[type="text"] { width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>自动排版插件V1.0</h1>
+    <div class="card">
+        <div class="card-title">1. 排版行数设置</div>
+        <div class="row">
+            <div style="display: flex; align-items: center;">
+                <label style="width: auto; margin-right: 10px;">行数:</label>
+                <input type="number" id="entry_rows" value="45">
+            </div>
+            <button class="btn-gray" onclick="openPresetManager()">⚙用户预设</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">2.模板设置 (≤135色将自动应用)</div>
+        <div class="row">
+            <label>模板文件:</label><div class="path-label" id="lbl_tpl">未选择</div>
+            <button class="btn-green" onclick="document.getElementById('input_tpl').click()">选择模板</button>
+            <input type="file" id="input_tpl" accept="application/pdf">
+        </div>
+        <div class="row">
+            <label>客户 Logo:</label><div class="path-label" id="lbl_logo">未选择</div>
+            <button class="btn-orange" onclick="document.getElementById('input_logo').click()">选择 Logo</button>
+            <input type="file" id="input_logo" accept="image/png, image/jpeg">
+        </div>
+        <div class="row">
+            <label>图片预览:</label><div class="path-label" id="lbl_img_folder">未选择</div>
+            <button class="btn-purple" onclick="document.getElementById('input_img_folder').click()">选择文件夹</button>
+            <input type="file" id="input_img_folder" webkitdirectory directory multiple>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">3.PDF数据源</div>
+        <div class="row">
+            <label>导入数量:</label><div class="path-label" id="lbl_ref">未选择</div>
+            <button class="btn-blue" onclick="document.getElementById('input_ref').click()">批量导入 PDF</button>
+            <input type="file" id="input_ref" accept="application/pdf" multiple>
+        </div>
+    </div>
+    <div style="padding: 0 25px;">
+        <div class="progress-container"><div class="progress-bar" id="progressbar"></div></div>
+        <button class="btn-main" id="btn_main" onclick="startWorkflow()">🚀开始全自动流作业</button>
+        <div class="status-lbl" id="status_lbl">系统准备就绪, 本地引擎加载成功</div>
+    </div>
+</div>
+
+<div class="modal" id="presetModal">
+    <div class="modal-content">
+        <div class="card">
+            <div class="card-title">读取或删除已有预设</div>
+            <select id="combo_presets"></select>
+            <div class="row" style="margin-top: 15px;">
+                <button class="btn-blue" onclick="applyPreset()">应用此预设</button>
+                <button class="btn-red" onclick="deletePreset()">删除此预设</button>
+            </div>
+        </div>
+        <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="font-weight: normal;">将当前主界面的参数保存为新预设</div>
+            <input type="text" id="entry_new_name" placeholder="给新模板起个名字 (如: 客户A_默认)">
+            <button class="btn-green" style="width: 100%;" onclick="savePreset()">保存当前参数</button>
+        </div>
+        <button class="btn-gray" style="width: 100%; margin-top: 15px;" onclick="closePresetManager()">关闭</button>
+    </div>
+</div>
+
+<script>
+    // 核心变化：同样调用本地 libs 文件夹里的 worker 文件
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './libs/pdf.worker.min.js';
+
+    const state = { templateFile: null, logoFile: null, imageFiles: [], refPdfs: [] };
+
+    document.getElementById('input_tpl').addEventListener('change', (e) => {
+        if(e.target.files[0]) { state.templateFile = e.target.files[0]; document.getElementById('lbl_tpl').innerText = state.templateFile.name; document.getElementById('lbl_tpl').style.color = 'var(--ios-green)'; }
+    });
+    document.getElementById('input_logo').addEventListener('change', (e) => {
+        if(e.target.files[0]) { state.logoFile = e.target.files[0]; document.getElementById('lbl_logo').innerText = state.logoFile.name; document.getElementById('lbl_logo').style.color = 'var(--ios-orange)'; }
+    });
+    document.getElementById('input_img_folder').addEventListener('change', (e) => {
+        if(e.target.files.length > 0) { state.imageFiles = Array.from(e.target.files).filter(f => f.name.match(/\.(jpg|jpeg|png)$/i)); document.getElementById('lbl_img_folder').innerText = `已读取 ${state.imageFiles.length} 张图片`; document.getElementById('lbl_img_folder').style.color = '#5856D6'; }
+    });
+    document.getElementById('input_ref').addEventListener('change', (e) => {
+        if(e.target.files.length > 0) { state.refPdfs = Array.from(e.target.files); document.getElementById('lbl_ref').innerText = `已选中 ${state.refPdfs.length} 个源文件`; document.getElementById('lbl_ref').style.color = 'var(--ios-blue)'; }
+    });
+
+    function getPresets() { return JSON.parse(localStorage.getItem("koo_presets") || "{}"); }
+    function savePresetsToStorage(presets) { localStorage.setItem("koo_presets", JSON.stringify(presets)); }
+    function openPresetManager() {
+        const presets = getPresets(); const select = document.getElementById('combo_presets'); select.innerHTML = '';
+        const keys = Object.keys(presets);
+        if(keys.length === 0) select.innerHTML = '<option value="">(无可用预设)option>'; else keys.forEach(k => select.add(new Option(k, k)));
+        document.getElementById('presetModal').style.display = 'flex';
+    }
+    function closePresetManager() { document.getElementById('presetModal').style.display = 'none'; }
+    function savePreset() {
+        const name = document.getElementById('entry_new_name').value.trim();
+        if(!name) return alert("预设名称不能为空！");
+        const presets = getPresets(); presets[name] = { rows: document.getElementById('entry_rows').value };
+        savePresetsToStorage(presets); alert(`预设 '${name}' 保存成功！`); openPresetManager(); document.getElementById('entry_new_name').value = '';
+    }
+    function applyPreset() {
+        const name = document.getElementById('combo_presets').value; const presets = getPresets();
+        if(presets[name]) { document.getElementById('entry_rows').value = presets[name].rows; alert(`已成功应用预设: ${name}\n注：安全机制限制，请手动重选模板文件。`); closePresetManager(); }
+    }
+    function deletePreset() {
+        const name = document.getElementById('combo_presets').value; const presets = getPresets();
+        if(presets[name]) { delete presets[name]; savePresetsToStorage(presets); alert(`预设 ${name} 已删除。`); openPresetManager(); }
+    }
+
+    function cleanStringForMatch(text) { return text.replace(/(?i)\s*\d+[xX]\d+.*$/, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); }
+    function similarity(s1, s2) {
+        let longer = s1.length > s2.length ? s1 : s2; let shorter = s1.length > s2.length ? s2 : s1;
+        if (longer.length === 0) return 1.0;
+        let costs = new Array();
+        for (let i = 0; i <= longer.length; i++) {
+            let lastValue = i;
+            for (let j = 0; j <= shorter.length; j++) {
+                if (i == 0) costs[j] = j;
+                else {
+                    if (j > 0) {
+                        let newValue = costs[j - 1];
+                        if (longer.charAt(i - 1) != shorter.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                        costs[j - 1] = lastValue; lastValue = newValue;
+                    }
+                }
+            }
+            if (i > 0) costs[shorter.length] = lastValue;
+        }
+        return (longer.length - costs[shorter.length]) / parseFloat(longer.length);
+    }
+    function sortLogic(a, b) {
+        const hasAlphaA = /[A-Za-z]/.test(a.dmc) ? 1 : 0; const hasAlphaB = /[A-Za-z]/.test(b.dmc) ? 1 : 0;
+        if(hasAlphaA !== hasAlphaB) return hasAlphaA - hasAlphaB;
+        const numA = parseInt(a.dmc.match(/\d+/)?.[0] || 0); const numB = parseInt(b.dmc.match(/\d+/)?.[0] || 0);
+        return numA - numB;
+    }
+
+    async function extractDataFromPDF(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        const extractedData = []; const seenDmc = new Set();
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const viewport = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement("canvas"); const ctx = canvas.getContext("2d");
+            canvas.width = viewport.width; canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+            const items = textContent.items;
+            for(let i = 0; i < items.length; i++) {
+                if(items[i].str.includes("DMC") && i + 1 < items.length) {
+                    const dmcVal = items[i+1].str.trim();
+                    if(/^[a-zA-Z0-9]+$/.test(dmcVal) && !seenDmc.has(dmcVal)) {
+                        const transform = pdfjsLib.Util.transform(viewport.transform, items[i].transform);
+                        const x = transform[4]; const y = transform[5];
+                        const cropX = Math.max(0, x - 150); const cropY = Math.max(0, y - 20);
+                        const cropW = 100; const cropH = 40;
+                        const cropCanvas = document.createElement("canvas"); cropCanvas.width = cropW; cropCanvas.height = cropH;
+                        const cropCtx = cropCanvas.getContext("2d");
+                        cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+                        extractedData.push({ dmc: dmcVal, imgBase64: cropCanvas.toDataURL("image/png") });
+                        seenDmc.add(dmcVal);
+                    }
+                }
+            }
+        }
+        return extractedData;
+    }
+
+    async function processSingleFile(file, rowsPerCol) {
+        let extractedData = await extractDataFromPDF(file);
+        extractedData.sort(sortLogic);
+        const totalColors = extractedData.length;
+        const statusLbl = document.getElementById('status_lbl');
+        let useTemplate = false;
+
+        if (state.templateFile) {
+            if (totalColors <= 135) { useTemplate = true; statusLbl.innerText = `✓ ${totalColors}色 - 启用模板`; statusLbl.style.color = "var(--ios-green)"; }
+            else { statusLbl.innerText = `⚠ ${totalColors}色 - 纯白页`; statusLbl.style.color = "var(--ios-orange)"; }
+        }
+
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        let outDoc, firstPage;
+
+        if (useTemplate) {
+            const templateBytes = await state.templateFile.arrayBuffer();
+            outDoc = await PDFDocument.load(templateBytes); firstPage = outDoc.getPages()[0];
+            const itemCode = file.name.split('.').slice(0, -1).join('.').replace(/(?i)\s*\d+[xX]\d+.*$/, '').trim();
+
+            if(state.logoFile) {
+                const logoBytes = await state.logoFile.arrayBuffer();
+                const logoImg = state.logoFile.name.toLowerCase().endsWith('png') ? await outDoc.embedPng(logoBytes) : await outDoc.embedJpg(logoBytes);
+                firstPage.drawImage(logoImg, { x: 331, y: 842 - 63, width: 229, height: 41 }); 
+            }
+
+            const cleanTarget = cleanStringForMatch(file.name);
+            let bestMatch = null; let highestRatio = 0.0;
+            for(let imgFile of state.imageFiles) {
+                const ratio = similarity(cleanTarget, cleanStringForMatch(imgFile.name));
+                if(ratio > highestRatio && ratio > 0.6) { highestRatio = ratio; bestMatch = imgFile; }
+            }
+
+            if(bestMatch) {
+                const imgBytes = await bestMatch.arrayBuffer();
+                const productImg = bestMatch.name.toLowerCase().endsWith('png') ? await outDoc.embedPng(imgBytes) : await outDoc.embedJpg(imgBytes);
+                firstPage.drawImage(productImg, { x: 336, y: 842 - 278, width: 220, height: 189 });
+            }
+
+            const font = await outDoc.embedFont(StandardFonts.Helvetica);
+            firstPage.drawText(itemCode, { x: 336, y: 842 - 340, size: 18, font: font, color: rgb(0,0,0) });
+        } else {
+            outDoc = await PDFDocument.create(); firstPage = outDoc.addPage([595, 842]);
+            const fontBold = await outDoc.embedFont(StandardFonts.TimesRomanBold);
+            firstPage.drawText("COLOR LIST", { x: 230, y: 842 - 50, size: 22, font: fontBold });
+        }
+
+        const m_left = 28, m_top = 90, col_w = 110, usable_height = 702;
+        const row_h = usable_height / rowsPerCol; const items_per_page = rowsPerCol * 5;
+        const fontHelv = await outDoc.embedFont(StandardFonts.Helvetica);
+        const fontBold = await outDoc.embedFont(StandardFonts.TimesRomanBold);
+        const colorIdx = rgb(49/255, 27/255, 94/255);
+        let currentPage = firstPage;
+
+        for (let idx = 0; idx < extractedData.length; idx++) {
+            const item = extractedData[idx];
+            if (idx > 0 && idx % items_per_page === 0) {
+                currentPage = outDoc.addPage([595, 842]);
+                currentPage.drawText("COLOR LIST (续)", { x: 230, y: 842 - 50, size: 22, font: fontBold });
+            }
+
+            const local_idx = idx % items_per_page;
+            const col = Math.floor(local_idx / rowsPerCol); const row = local_idx % rowsPerCol;
+            const curr_x = m_left + (col * col_w); const curr_y = 842 - (m_top + (row * row_h));
+
+            const idxStr = (idx + 1).toString().padStart(2, '0');
+            currentPage.drawText(idxStr, { x: curr_x, y: curr_y, size: 10, font: fontHelv, color: colorIdx });
+            
+            if(item.imgBase64) {
+                const imgBytes = await fetch(item.imgBase64).then(res => res.arrayBuffer());
+                const symbolImg = await outDoc.embedPng(imgBytes);
+                currentPage.drawImage(symbolImg, { x: curr_x + 24, y: curr_y - 4, width: 16, height: 16 });
+            }
+
+            currentPage.drawText(item.dmc, { x: curr_x + 46, y: curr_y, size: 10, font: fontHelv, color: rgb(0,0,0) });
+        }
+
+        const pdfBytes = await outDoc.save();
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+        link.download = `${file.name.replace(/\.[^/.]+$/, "")}_自动排版.pdf`;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+    async function startWorkflow() {
+        if(state.refPdfs.length === 0) { document.getElementById('status_lbl').innerText = "❌ 请导入数据源！"; document.getElementById('status_lbl').style.color = "red"; return; }
+        const rowsPerCol = parseInt(document.getElementById('entry_rows').value);
+        if(isNaN(rowsPerCol) || rowsPerCol <= 0) return;
+
+        const btn = document.getElementById('btn_main'); btn.disabled = true; btn.innerText = "AI排版运转中...";
+        let successCount = 0; const totalFiles = state.refPdfs.length;
+
+        for (let i = 0; i < totalFiles; i++) {
+            const file = state.refPdfs[i];
+            document.getElementById('status_lbl').innerText = `⚙️ 解析: ${file.name}`; document.getElementById('status_lbl').style.color = "var(--ios-blue)";
+            try { await processSingleFile(file, rowsPerCol); successCount++; } 
+            catch(e) { document.getElementById('status_lbl').innerText = `❌ ${file.name} 失败`; document.getElementById('status_lbl').style.color = "red"; await new Promise(r => setTimeout(r, 2000)); }
+            document.getElementById('progressbar').style.width = `${((i + 1) / totalFiles) * 100}%`;
+        }
+
+        btn.disabled = false; btn.innerText = "🚀开始全自动AI输出";
+        document.getElementById('status_lbl').innerText = `✅ ${successCount} 个文件作业完毕！`; document.getElementById('status_lbl').style.color = "var(--ios-green)";
+    }
+</script>
+</body>
+</html>
