@@ -7,7 +7,6 @@
     <script src="./libs/pdf.min.js"></script>
     <script src="./libs/pdf-lib.min.js"></script>
     <style>
-        /* iOS 颜色常量定义 */
         :root {
             --ios-bg: #F2F2F7; --ios-card: #FFFFFF; --ios-blue: #007AFF;
             --ios-green: #34C759; --ios-orange: #FF9500; --ios-gray: #8E8E93;
@@ -103,51 +102,105 @@
 </div>
 
 <script>
-    // 核心变化：同样调用本地 libs 文件夹里的 worker 文件
     pdfjsLib.GlobalWorkerOptions.workerSrc = './libs/pdf.worker.min.js';
-
     const state = { templateFile: null, logoFile: null, imageFiles: [], refPdfs: [] };
 
     document.getElementById('input_tpl').addEventListener('change', (e) => {
-        if(e.target.files[0]) { state.templateFile = e.target.files[0]; document.getElementById('lbl_tpl').innerText = state.templateFile.name; document.getElementById('lbl_tpl').style.color = 'var(--ios-green)'; }
-    });
-    document.getElementById('input_logo').addEventListener('change', (e) => {
-        if(e.target.files[0]) { state.logoFile = e.target.files[0]; document.getElementById('lbl_logo').innerText = state.logoFile.name; document.getElementById('lbl_logo').style.color = 'var(--ios-orange)'; }
-    });
-    document.getElementById('input_img_folder').addEventListener('change', (e) => {
-        if(e.target.files.length > 0) { state.imageFiles = Array.from(e.target.files).filter(f => f.name.match(/\.(jpg|jpeg|png)$/i)); document.getElementById('lbl_img_folder').innerText = `已读取 ${state.imageFiles.length} 张图片`; document.getElementById('lbl_img_folder').style.color = '#5856D6'; }
-    });
-    document.getElementById('input_ref').addEventListener('change', (e) => {
-        if(e.target.files.length > 0) { state.refPdfs = Array.from(e.target.files); document.getElementById('lbl_ref').innerText = `已选中 ${state.refPdfs.length} 个源文件`; document.getElementById('lbl_ref').style.color = 'var(--ios-blue)'; }
+        if(e.target.files[0]) { 
+            state.templateFile = e.target.files[0]; 
+            document.getElementById('lbl_tpl').innerText = state.templateFile.name; 
+            document.getElementById('lbl_tpl').style.color = 'var(--ios-green)';
+        }
     });
 
-    function getPresets() { return JSON.parse(localStorage.getItem("koo_presets") || "{}"); }
-    function savePresetsToStorage(presets) { localStorage.setItem("koo_presets", JSON.stringify(presets)); }
+    document.getElementById('input_logo').addEventListener('change', (e) => {
+        if(e.target.files[0]) { 
+            state.logoFile = e.target.files[0]; 
+            document.getElementById('lbl_logo').innerText = state.logoFile.name; 
+            document.getElementById('lbl_logo').style.color = 'var(--ios-orange)';
+        }
+    });
+
+    document.getElementById('input_img_folder').addEventListener('change', (e) => {
+        if(e.target.files.length > 0) { 
+            state.imageFiles = Array.from(e.target.files).filter(f => f.name.match(/\.(jpg|jpeg|png)$/i)); 
+            document.getElementById('lbl_img_folder').innerText = `已读取 ${state.imageFiles.length} 个图片`; 
+            document.getElementById('lbl_img_folder').style.color = 'var(--ios-blue)';
+        }
+    });
+
+    document.getElementById('input_ref').addEventListener('change', (e) => {
+        if(e.target.files.length > 0) { 
+            state.refPdfs = Array.from(e.target.files); 
+            document.getElementById('lbl_ref').innerText = `已选中 ${state.refPdfs.length} 个源文件`; 
+            document.getElementById('lbl_ref').style.color = 'var(--ios-blue)';
+        }
+    });
+
+    function getPresets() { 
+        return JSON.parse(localStorage.getItem("koo_presets") || "{}"); 
+    }
+
+    function savePresetsToStorage(presets) { 
+        localStorage.setItem("koo_presets", JSON.stringify(presets)); 
+    }
+
     function openPresetManager() {
-        const presets = getPresets(); const select = document.getElementById('combo_presets'); select.innerHTML = '';
+        const presets = getPresets(); 
+        const select = document.getElementById('combo_presets'); 
+        select.innerHTML = '';
         const keys = Object.keys(presets);
-        if(keys.length === 0) select.innerHTML = '<option value="">(无可用预设)option>'; else keys.forEach(k => select.add(new Option(k, k)));
+        if(keys.length === 0) { 
+            select.innerHTML = '<option value="">(无可用预设)</option>'; 
+        } else { 
+            keys.forEach(k => select.add(new Option(k, k)));
+        }
         document.getElementById('presetModal').style.display = 'flex';
     }
-    function closePresetManager() { document.getElementById('presetModal').style.display = 'none'; }
+
+    function closePresetManager() { 
+        document.getElementById('presetModal').style.display = 'none'; 
+    }
+
     function savePreset() {
         const name = document.getElementById('entry_new_name').value.trim();
         if(!name) return alert("预设名称不能为空！");
-        const presets = getPresets(); presets[name] = { rows: document.getElementById('entry_rows').value };
-        savePresetsToStorage(presets); alert(`预设 '${name}' 保存成功！`); openPresetManager(); document.getElementById('entry_new_name').value = '';
-    }
-    function applyPreset() {
-        const name = document.getElementById('combo_presets').value; const presets = getPresets();
-        if(presets[name]) { document.getElementById('entry_rows').value = presets[name].rows; alert(`已成功应用预设: ${name}\n注：安全机制限制，请手动重选模板文件。`); closePresetManager(); }
-    }
-    function deletePreset() {
-        const name = document.getElementById('combo_presets').value; const presets = getPresets();
-        if(presets[name]) { delete presets[name]; savePresetsToStorage(presets); alert(`预设 ${name} 已删除。`); openPresetManager(); }
+        const presets = getPresets(); 
+        presets[name] = { rows: document.getElementById('entry_rows').value };
+        savePresetsToStorage(presets); 
+        alert(`预设 '${name}' 保存成功！`); 
+        openPresetManager(); 
+        document.getElementById('entry_new_name').value = '';
     }
 
-    function cleanStringForMatch(text) { return text.replace(/(?i)\s*\d+[xX]\d+.*$/, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); }
+    function applyPreset() {
+        const name = document.getElementById('combo_presets').value; 
+        const presets = getPresets();
+        if(presets[name]) { 
+            document.getElementById('entry_rows').value = presets[name].rows; 
+            alert(`已成功应用预设: ${name}\n注：安全机制限制，请手动重选模板文件。`); 
+            closePresetManager();
+        }
+    }
+
+    function deletePreset() {
+        const name = document.getElementById('combo_presets').value; 
+        const presets = getPresets();
+        if(presets[name]) { 
+            delete presets[name]; 
+            savePresetsToStorage(presets); 
+            alert(`预设 ${name} 已删除。`); 
+            openPresetManager(); 
+        }
+    }
+
+    function cleanStringForMatch(text) { 
+        return text.replace(/(?i)\s*\d+[xX]\d+.*$/, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); 
+    }
+
     function similarity(s1, s2) {
-        let longer = s1.length > s2.length ? s1 : s2; let shorter = s1.length > s2.length ? s2 : s1;
+        let longer = s1.length > s2.length ? s1 : s2; 
+        let shorter = s1.length > s2.length ? s2 : s1;
         if (longer.length === 0) return 1.0;
         let costs = new Array();
         for (let i = 0; i <= longer.length; i++) {
@@ -158,7 +211,8 @@
                     if (j > 0) {
                         let newValue = costs[j - 1];
                         if (longer.charAt(i - 1) != shorter.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                        costs[j - 1] = lastValue; lastValue = newValue;
+                        costs[j - 1] = lastValue; 
+                        lastValue = newValue;
                     }
                 }
             }
@@ -166,24 +220,30 @@
         }
         return (longer.length - costs[shorter.length]) / parseFloat(longer.length);
     }
+
     function sortLogic(a, b) {
-        const hasAlphaA = /[A-Za-z]/.test(a.dmc) ? 1 : 0; const hasAlphaB = /[A-Za-z]/.test(b.dmc) ? 1 : 0;
+        const hasAlphaA = /[A-Za-z]/.test(a.dmc) ? 1 : 0; 
+        const hasAlphaB = /[A-Za-z]/.test(b.dmc) ? 1 : 0;
         if(hasAlphaA !== hasAlphaB) return hasAlphaA - hasAlphaB;
-        const numA = parseInt(a.dmc.match(/\d+/)?.[0] || 0); const numB = parseInt(b.dmc.match(/\d+/)?.[0] || 0);
+        const numA = parseInt(a.dmc.match(/\d+/)?.[0] || 0); 
+        const numB = parseInt(b.dmc.match(/\d+/)?.[0] || 0);
         return numA - numB;
     }
 
     async function extractDataFromPDF(file) {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-        const extractedData = []; const seenDmc = new Set();
+        const extractedData = []; 
+        const seenDmc = new Set();
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const textContent = await page.getTextContent();
             const viewport = page.getViewport({ scale: 2.0 });
-            const canvas = document.createElement("canvas"); const ctx = canvas.getContext("2d");
-            canvas.width = viewport.width; canvas.height = viewport.height;
+            const canvas = document.createElement("canvas"); 
+            const ctx = canvas.getContext("2d");
+            canvas.width = viewport.width; 
+            canvas.height = viewport.height;
             await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
             const items = textContent.items;
@@ -192,10 +252,15 @@
                     const dmcVal = items[i+1].str.trim();
                     if(/^[a-zA-Z0-9]+$/.test(dmcVal) && !seenDmc.has(dmcVal)) {
                         const transform = pdfjsLib.Util.transform(viewport.transform, items[i].transform);
-                        const x = transform[4]; const y = transform[5];
-                        const cropX = Math.max(0, x - 150); const cropY = Math.max(0, y - 20);
-                        const cropW = 100; const cropH = 40;
-                        const cropCanvas = document.createElement("canvas"); cropCanvas.width = cropW; cropCanvas.height = cropH;
+                        const x = transform[4]; 
+                        const y = transform[5];
+                        const cropX = Math.max(0, x - 150); 
+                        const cropY = Math.max(0, y - 20);
+                        const cropW = 100; 
+                        const cropH = 40;
+                        const cropCanvas = document.createElement("canvas"); 
+                        cropCanvas.width = cropW; 
+                        cropCanvas.height = cropH;
                         const cropCtx = cropCanvas.getContext("2d");
                         cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
                         extractedData.push({ dmc: dmcVal, imgBase64: cropCanvas.toDataURL("image/png") });
@@ -215,8 +280,15 @@
         let useTemplate = false;
 
         if (state.templateFile) {
-            if (totalColors <= 135) { useTemplate = true; statusLbl.innerText = `✓ ${totalColors}色 - 启用模板`; statusLbl.style.color = "var(--ios-green)"; }
-            else { statusLbl.innerText = `⚠ ${totalColors}色 - 纯白页`; statusLbl.style.color = "var(--ios-orange)"; }
+            if (totalColors <= 135) { 
+                useTemplate = true; 
+                statusLbl.innerText = `✓ ${totalColors}色 - 启用模板`; 
+                statusLbl.style.color = "var(--ios-green)"; 
+            }
+            else { 
+                statusLbl.innerText = `⚠ ${totalColors}色 - 纯白页`; 
+                statusLbl.style.color = "var(--ios-orange)"; 
+            }
         }
 
         const { PDFDocument, rgb, StandardFonts } = PDFLib;
@@ -224,7 +296,8 @@
 
         if (useTemplate) {
             const templateBytes = await state.templateFile.arrayBuffer();
-            outDoc = await PDFDocument.load(templateBytes); firstPage = outDoc.getPages()[0];
+            outDoc = await PDFDocument.load(templateBytes); 
+            firstPage = outDoc.getPages()[0];
             const itemCode = file.name.split('.').slice(0, -1).join('.').replace(/(?i)\s*\d+[xX]\d+.*$/, '').trim();
 
             if(state.logoFile) {
@@ -234,10 +307,14 @@
             }
 
             const cleanTarget = cleanStringForMatch(file.name);
-            let bestMatch = null; let highestRatio = 0.0;
+            let bestMatch = null; 
+            let highestRatio = 0.0;
             for(let imgFile of state.imageFiles) {
                 const ratio = similarity(cleanTarget, cleanStringForMatch(imgFile.name));
-                if(ratio > highestRatio && ratio > 0.6) { highestRatio = ratio; bestMatch = imgFile; }
+                if(ratio > highestRatio && ratio > 0.6) { 
+                    highestRatio = ratio; 
+                    bestMatch = imgFile; 
+                }
             }
 
             if(bestMatch) {
@@ -249,13 +326,15 @@
             const font = await outDoc.embedFont(StandardFonts.Helvetica);
             firstPage.drawText(itemCode, { x: 336, y: 842 - 340, size: 18, font: font, color: rgb(0,0,0) });
         } else {
-            outDoc = await PDFDocument.create(); firstPage = outDoc.addPage([595, 842]);
+            outDoc = await PDFDocument.create(); 
+            firstPage = outDoc.addPage([595, 842]);
             const fontBold = await outDoc.embedFont(StandardFonts.TimesRomanBold);
             firstPage.drawText("COLOR LIST", { x: 230, y: 842 - 50, size: 22, font: fontBold });
         }
 
         const m_left = 28, m_top = 90, col_w = 110, usable_height = 702;
-        const row_h = usable_height / rowsPerCol; const items_per_page = rowsPerCol * 5;
+        const row_h = usable_height / rowsPerCol; 
+        const items_per_page = rowsPerCol * 5;
         const fontHelv = await outDoc.embedFont(StandardFonts.Helvetica);
         const fontBold = await outDoc.embedFont(StandardFonts.TimesRomanBold);
         const colorIdx = rgb(49/255, 27/255, 94/255);
@@ -269,8 +348,10 @@
             }
 
             const local_idx = idx % items_per_page;
-            const col = Math.floor(local_idx / rowsPerCol); const row = local_idx % rowsPerCol;
-            const curr_x = m_left + (col * col_w); const curr_y = 842 - (m_top + (row * row_h));
+            const col = Math.floor(local_idx / rowsPerCol); 
+            const row = local_idx % rowsPerCol;
+            const curr_x = m_left + (col * col_w); 
+            const curr_y = 842 - (m_top + (row * row_h));
 
             const idxStr = (idx + 1).toString().padStart(2, '0');
             currentPage.drawText(idxStr, { x: curr_x, y: curr_y, size: 10, font: fontHelv, color: colorIdx });
@@ -286,29 +367,50 @@
 
         const pdfBytes = await outDoc.save();
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
-        const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+        const link = document.createElement('a'); 
+        link.href = URL.createObjectURL(blob);
         link.download = `${file.name.replace(/\.[^/.]+$/, "")}_自动排版.pdf`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        document.body.appendChild(link); 
+        link.click(); 
+        document.body.removeChild(link);
     }
 
     async function startWorkflow() {
-        if(state.refPdfs.length === 0) { document.getElementById('status_lbl').innerText = "❌ 请导入数据源！"; document.getElementById('status_lbl').style.color = "red"; return; }
+        if(state.refPdfs.length === 0) { 
+            document.getElementById('status_lbl').innerText = "❌ 请导入数据源！"; 
+            document.getElementById('status_lbl').style.color = "red"; 
+            return; 
+        }
         const rowsPerCol = parseInt(document.getElementById('entry_rows').value);
         if(isNaN(rowsPerCol) || rowsPerCol <= 0) return;
 
-        const btn = document.getElementById('btn_main'); btn.disabled = true; btn.innerText = "AI排版运转中...";
-        let successCount = 0; const totalFiles = state.refPdfs.length;
+        const btn = document.getElementById('btn_main'); 
+        btn.disabled = true; 
+        btn.innerText = "AI排版运转中...";
+        let successCount = 0; 
+        const totalFiles = state.refPdfs.length;
 
         for (let i = 0; i < totalFiles; i++) {
             const file = state.refPdfs[i];
-            document.getElementById('status_lbl').innerText = `⚙️ 解析: ${file.name}`; document.getElementById('status_lbl').style.color = "var(--ios-blue)";
-            try { await processSingleFile(file, rowsPerCol); successCount++; } 
-            catch(e) { document.getElementById('status_lbl').innerText = `❌ ${file.name} 失败`; document.getElementById('status_lbl').style.color = "red"; await new Promise(r => setTimeout(r, 2000)); }
+            document.getElementById('status_lbl').innerText = `⚙️ 解析: ${file.name}`; 
+            document.getElementById('status_lbl').style.color = "var(--ios-blue)";
+            try { 
+                await processSingleFile(file, rowsPerCol); 
+                successCount++; 
+            } 
+            catch(e) { 
+                console.error(`处理失败 ${file.name}:`, e);
+                document.getElementById('status_lbl').innerText = `❌ ${file.name} 失败: ${e.message}`; 
+                document.getElementById('status_lbl').style.color = "red"; 
+                await new Promise(r => setTimeout(r, 2000));
+            }
             document.getElementById('progressbar').style.width = `${((i + 1) / totalFiles) * 100}%`;
         }
 
-        btn.disabled = false; btn.innerText = "🚀开始全自动AI输出";
-        document.getElementById('status_lbl').innerText = `✅ ${successCount} 个文件作业完毕！`; document.getElementById('status_lbl').style.color = "var(--ios-green)";
+        btn.disabled = false; 
+        btn.innerText = "🚀开始全自动AI输出";
+        document.getElementById('status_lbl').innerText = `✅ ${successCount} 个文件作业完毕！`; 
+        document.getElementById('status_lbl').style.color = "var(--ios-green)";
     }
 </script>
 </body>
